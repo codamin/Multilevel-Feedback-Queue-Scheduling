@@ -7,9 +7,13 @@
 #include "proc.h"
 #include "spinlock.h"
 
+#define NUM_OF_QS 3
+
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
+  struct proc* qs[3][NPROC];
+  int num_of_procs[NUM_OF_QS];
 } ptable;
 
 static struct proc *initproc;
@@ -332,26 +336,39 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
 
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
+    for (int q_number = 0; q_number < NUM_OF_QS; q_number ++) {
 
-      swtch(&(c->scheduler), p->context);
-      switchkvm();
+      //executing the head process and shifting to left
+      for (; ptable.num_of_procs[q_number] >= 0;) {
 
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
+        //assigning head of the current queue to current process
+        p = ptable.qs[NUM_OF_QS][0];
+
+        // NOT SURE TO PUT THIS OR NOT********************************************
+        if(p->state != RUNNABLE)
+          continue;
+
+        //assign cpus current process to the selected process
+        c->proc = p;
+
+        //shifting processes in the current queue to left
+        for (int  i = 0; i < ptable.num_of_procs[q_number]; i++) {
+          ptable.qs[q_number][i] = ptable.qs[q_number][i+1];
+        }
+
+        switchuvm(p);
+        p->state = RUNNING;
+
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+      }
     }
     release(&ptable.lock);
-
   }
 }
 
