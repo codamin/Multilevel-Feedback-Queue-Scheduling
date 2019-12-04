@@ -659,6 +659,34 @@ procdump(void)
   }
 }
 
+
+void
+print_integer(int n) {
+
+  char digit[20];
+
+  int temp = n;
+
+  int count = 0;
+
+  while(temp > 0)
+  {
+    temp = temp/10;
+    count++;
+  }
+
+  for(int i = count-1; i >=0; i--)
+  {
+    digit[i] = n % 10 + '0';
+    n /= 10;
+  }
+
+  digit[count] = '\0';
+
+  cprintf(digit);
+}
+
+
 int
 setpri(int pid, int pri)
 {
@@ -674,18 +702,28 @@ setpri(int pid, int pri)
   return 0;
 }
 
-void
-print_integer(int n) {
-  char digit[2];
-  digit[1] = '\n';
-  while(n > 0)
-  {
-      digit[0] = n % 10 + '0';
-      n /= 10;
-      cprintf(digit);
-  }
-}
 
+// enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+
+void
+print_state(enum procstate state) 
+{
+   switch (state) 
+   {
+      case UNUSED: { cprintf("UNUSED  ");
+                    break;}
+      case EMBRYO: { cprintf("EMBRYO  ");
+                    break;}
+      case SLEEPING: { cprintf("SLEEPING");
+                    break;}
+      case RUNNABLE: { cprintf("RUNNABLE");
+                    break;}
+      case RUNNING: {cprintf("RUNNING ");
+                    break;}
+      case ZOMBIE: { cprintf("ZOMBIE  ");
+                    break;}
+   }
+}
 
 int
 pinfo()
@@ -697,13 +735,23 @@ pinfo()
   cprintf("pid");
   cprintf("\t\t");
   cprintf("state");
-  cprintf("\t\t");
+  cprintf("\t\t\t");
   cprintf("priority");
+  cprintf("\t");
+  cprintf("remPriority");
+  cprintf("\t");
+  cprintf("tickets");
+  cprintf("\t\t");
+  cprintf("execNum");
+  cprintf("\t\t");
+  cprintf("HRRN");
   cprintf("\t\t");
   cprintf("crateTime");
   cprintf("\t\t");
   cprintf("\n");
   cprintf("---------------------------------------------------------------------------------------------------------------------------------\n");
+  
+
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
     if(p->state != UNUSED)
     {
@@ -711,9 +759,18 @@ pinfo()
       cprintf("\t\t");
       print_integer(p->pid);
       cprintf("\t\t");
-      print_integer(p->state);
+      print_state(p->state);
       cprintf("\t\t");
       print_integer(p->priority);
+      cprintf("\t\t");
+      print_integer(p->remPriority);
+      cprintf("\t\t");
+      print_integer(p->tickets);
+      cprintf("\t\t");
+      print_integer(p->execNum);
+      cprintf("\t\t");
+      int hrrn = (ticks - p->ctime)/p->execNum;
+      print_integer(hrrn);
       cprintf("\t\t");
       print_integer(p->ctime);
       cprintf("\t\t");

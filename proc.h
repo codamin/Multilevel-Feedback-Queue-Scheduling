@@ -53,7 +53,7 @@ struct proc {
   int tickets;
   uint ctime;
   uint execNum;
-  int remPriority;
+  float remPriority;
 };
 
 // Process memory is laid out contiguously, low addresses first:
