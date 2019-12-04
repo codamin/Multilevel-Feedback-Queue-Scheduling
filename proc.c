@@ -674,10 +674,24 @@ setpri(int pid, int pri)
   return 0;
 }
 
+void
+print_integer(int n) {
+  char digit[2];
+  digit[1] = '\n';
+  while(n > 0)
+  {
+      digit[0] = n % 10 + '0';
+      n /= 10;
+      cprintf(digit);
+  }
+}
+
+
 int
 pinfo()
 {
   struct proc *p;
+
   cprintf("name");
   cprintf("\t\t");
   cprintf("pid");
@@ -687,9 +701,24 @@ pinfo()
   cprintf("priority");
   cprintf("\t\t");
   cprintf("crateTime");
-  cprintf("---------------------------------------------------------------------------------------------------------------------------------");
+  cprintf("\t\t");
+  cprintf("\n");
+  cprintf("---------------------------------------------------------------------------------------------------------------------------------\n");
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-    cprintf("%-10s %-10d %-10s %-10s %-10d\n", p->name, p->pid, p->state, p->priority, p->ctime);
+    if(p->state != UNUSED)
+    {
+      cprintf(p->name);
+      cprintf("\t\t");
+      print_integer(p->pid);
+      cprintf("\t\t");
+      print_integer(p->state);
+      cprintf("\t\t");
+      print_integer(p->priority);
+      cprintf("\t\t");
+      print_integer(p->ctime);
+      cprintf("\t\t");
+      cprintf("\n");
+    }
   }
   return 1;
 }
