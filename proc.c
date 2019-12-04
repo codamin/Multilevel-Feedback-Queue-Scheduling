@@ -678,7 +678,15 @@ int
 pinfo()
 {
   struct proc *p;
-  cprintf("%-10s %-10s %-10s %-10s %-10s\n", "name", "pid", "state", "priority", "crateTime");
+  cprintf("name");
+  cprintf("\t\t");
+  cprintf("pid");
+  cprintf("\t\t");
+  cprintf("state");
+  cprintf("\t\t");
+  cprintf("priority");
+  cprintf("\t\t");
+  cprintf("crateTime");
   cprintf("---------------------------------------------------------------------------------------------------------------------------------");
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
     cprintf("%-10s %-10d %-10s %-10s %-10d\n", p->name, p->pid, p->state, p->priority, p->ctime);
