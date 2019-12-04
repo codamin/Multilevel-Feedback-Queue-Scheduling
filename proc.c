@@ -11,8 +11,7 @@
 
 struct {
   struct spinlock lock;
-  struct proc proc[NPROC];
-  struct proc* qs[3][NPROC];
+  struct proc proc[3][NPROC];
   int num_of_procs[NUM_OF_QS];
 } ptable;
 
@@ -337,25 +336,21 @@ scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
 
-    for (int q_number = 0; q_number < NUM_OF_QS; q_number ++) {
+    // for (int q_number = 0; q_number < NUM_OF_QS; q_number ++) {
 
-      //executing the head process and shifting to left
-      for (; ptable.num_of_procs[q_number] >= 0;) {
+    //   //executing the head process and shifting to left
+    //   for (; ptable.num_of_procs[q_number] >= 0;) {
 
-        //assigning head of the current queue to current process
-        p = ptable.qs[NUM_OF_QS][0];
+    //     //assigning head of the current queue to current process
+    //     p = ptable.qs[NUM_OF_QS][0];
 
-        // NOT SURE TO PUT THIS OR NOT********************************************
-        if(p->state != RUNNABLE)
-          continue;
+    //     // NOT SURE TO PUT THIS OR NOT********************************************
+    //     if(p->state != RUNNABLE)
+    //       continue;
 
-        //assign cpus current process to the selected process
+    //     //assign cpus current process to the selected process
+
         c->proc = p;
-
-        //shifting processes in the current queue to left
-        for (int  i = 0; i < ptable.num_of_procs[q_number]; i++) {
-          ptable.qs[q_number][i] = ptable.qs[q_number][i+1];
-        }
 
         switchuvm(p);
         p->state = RUNNING;
@@ -371,6 +366,44 @@ scheduler(void)
     release(&ptable.lock);
   }
 }
+/*
+struct proc* findReadyProcess(int *index1, int *index2, int *index3, uint *priority) {
+  int i;
+  struct proc* proc2;
+notfound:
+  for (i = 0; i < NPROC; i++) {
+    switch(*priority) {
+      case 1:
+        proc2 = &ptable.proc[(*index1 + i) % NPROC];
+        if (proc2->state == RUNNABLE && proc2->priority == *priority) {
+          *index1 = (*index1 + 1 + i) % NPROC;
+          return proc2; // found a runnable process with appropriate priority
+        }
+      case 2:
+        proc2 = &ptable.proc[(*index2 + i) % NPROC];
+        if (proc2->state == RUNNABLE && proc2->priority == *priority) {
+          *index2 = (*index2 + 1 + i) % NPROC;
+          return proc2; // found a runnable process with appropriate priority
+        }
+      case 3:
+        proc2 = &ptable.proc[(*index3 + i) % NPROC];
+        if (proc2->state == RUNNABLE && proc2->priority == *priority){
+          *index3 = (*index3 + 1 + i) % NPROC;
+          return proc2; // found a runnable process with appropriate priority
+        }
+    }
+  }
+  if (*priority == 3) {//did not find any process on any of the prorities
+    *priority = 3;
+    return 0;
+  }
+  else {
+    *priority += 1; //will try to find a process at a lower priority (ighter value of priority)
+    goto notfound;
+  }
+  return 0;
+}
+*/
 
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state. Saves and restores
