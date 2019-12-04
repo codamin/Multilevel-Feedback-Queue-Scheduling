@@ -120,6 +120,11 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
+int             setpri(int, int);
+int             pinfo(void);
+int             set_tickets(int, int);
+int             set_rem(int, int);
+
 
 // swtch.S
 void            swtch(struct context**, struct context*);

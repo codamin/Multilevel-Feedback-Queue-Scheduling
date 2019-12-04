@@ -89,3 +89,40 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+int
+sys_setpri(void)
+{
+  int pid, pri;
+  argint(0, &pri);
+  argint(0, &pid);
+  int res = setpri(pid, pri);
+  return res;
+}
+
+int
+sys_pinfo(void)
+{
+  pinfo();
+  return 1;
+}
+
+int
+sys_set_tickets(void)
+{
+  int pid, ticket;
+  argint(0, &ticket);
+  argint(0, &pid);
+  int res = set_tickets(pid, ticket);
+  return res;
+}
+
+int
+sys_set_rem(void)
+{
+  int pid, rem;
+  argint(0, &rem);
+  argint(0, &pid);
+  int res = set_rem(pid, rem);
+  return res;
+}

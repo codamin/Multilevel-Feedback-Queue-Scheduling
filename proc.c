@@ -8,11 +8,12 @@
 #include "spinlock.h"
 
 #define NUM_OF_QS 3
+#define DEFAULT_TICKET 8
+#define DEFAULT_REM_PRIORITY 5
 
 struct {
   struct spinlock lock;
-  struct proc proc[3][NPROC];
-  int num_of_procs[NUM_OF_QS];
+  struct proc proc[NPROC];
 } ptable;
 
 static struct proc *initproc;
@@ -91,7 +92,11 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
-
+  p->priority = 1;
+  p->tickets = DEFAULT_TICKET;
+  p->ctime = ticks;
+  p->execNum = 1;
+  p->remPriority = DEFAULT_REM_PRIORITY;
   release(&ptable.lock);
 
   // Allocate kernel stack.
@@ -322,6 +327,118 @@ wait(void)
 //  - swtch to start running that process
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
+
+
+/* This method is used to generate a random number, between 0 and M
+This is a modified version of the LFSR alogrithm
+found here: http://goo.gl/At4AIC */
+int
+genRandom(int max) {
+
+  if(max <= 0) {
+    return 1;
+  }
+
+  static int z1 = 12345; // 12345 for rest of zx
+  static int z2 = 12345; // 12345 for rest of zx
+  static int z3 = 12345; // 12345 for rest of zx
+  static int z4 = 12345; // 12345 for rest of zx
+
+  int b;
+  b = (((z1 << 6) ^ z1) >> 13);
+  z1 = (((z1 & 4294967294) << 18) ^ b);
+  b = (((z2 << 2) ^ z2) >> 27);
+  z2 = (((z2 & 4294967288) << 2) ^ b);
+  b = (((z3 << 13) ^ z3) >> 21);
+  z3 = (((z3 & 4294967280) << 7) ^ b);
+  b = (((z4 << 3) ^ z4) >> 12);
+  z4 = (((z4 & 4294967168) << 13) ^ b);
+
+  // if we have an argument, then we can use it
+  int rand = ((z1 ^ z2 ^ z3 ^ z4)) % max;
+
+  if(rand < 0) {
+    rand = rand * -1;
+  }
+
+  return rand;
+}
+
+
+struct proc* findProcess() {
+  int i;
+  struct proc* proc2;
+  uint curPriority = 1;
+notfound:
+  if(curPriority == 1) {
+    int sumTickets = 0;
+    for(i=0; i<NPROC; i++) {
+      proc2 = &ptable.proc[i];
+      if(proc2->state == RUNNABLE && proc2->priority == curPriority)
+        sumTickets += proc2->tickets;
+    }
+    int random = genRandom(sumTickets);
+    for(i=0; i<NPROC; i++) {
+      proc2 = &ptable.proc[i];
+      if(proc2->state == RUNNABLE && proc2->priority == curPriority) {
+        if(random <= proc2->tickets)
+          return proc2;
+        else
+          random -= proc2->tickets;
+      }
+    }
+  }
+  else if(curPriority == 2) {
+    int curTime = ticks;
+    struct proc* maxP = 0;
+    int maxVal = -1;
+    for(i=0; i<NPROC; i++) {
+      proc2 = &ptable.proc[i];
+      if(proc2->state == RUNNABLE && proc2->priority == curPriority) {
+        int val = (curTime - proc2->ctime)/proc2->execNum;
+        if(val > maxVal) {
+          maxP = proc2;
+          maxVal = val;
+        }
+      }
+    }
+    if(maxVal != -1)
+      return maxP;
+  }
+  else {
+    int minVal = 85;
+    int numMin = 0;
+    int valList[NPROC];
+    for(i=0; i<NPROC; i++) {
+      proc2 = &ptable.proc[i];
+      if(proc2->state == RUNNABLE && proc2->priority == curPriority) {
+        if(proc2->remPriority < minVal) {
+          minVal = proc2->remPriority;
+          numMin = 1;
+          valList[0] = i;
+        }
+        else if(proc2->remPriority == minVal) {
+          valList[numMin] = i;
+          numMin++;
+        }
+      }
+    }
+    if(numMin > 0) {
+      int random = genRandom(numMin);
+      proc2 = &ptable.proc[valList[random]];
+      return proc2;
+    }
+  }
+  if(curPriority == 3)
+    return 0;
+  else {
+    curPriority += 1;
+    goto notfound;
+  }
+  return 0;
+}
+
+
 void
 scheduler(void)
 {
@@ -335,21 +452,18 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+      struct proc* foundP = 0;
 
-    // for (int q_number = 0; q_number < NUM_OF_QS; q_number ++) {
-
-    //   //executing the head process and shifting to left
-    //   for (; ptable.num_of_procs[q_number] >= 0;) {
-
-    //     //assigning head of the current queue to current process
-    //     p = ptable.qs[NUM_OF_QS][0];
-
-    //     // NOT SURE TO PUT THIS OR NOT********************************************
-    //     if(p->state != RUNNABLE)
-    //       continue;
-
-    //     //assign cpus current process to the selected process
-
+      foundP = findProcess();
+      if(foundP != 0)
+        p = foundP;
+      else
+        if(p->state != RUNNABLE)
+          continue;
+      
+      if(p != 0) {
+        p->execNum++;
         c->proc = p;
 
         switchuvm(p);
@@ -366,44 +480,6 @@ scheduler(void)
     release(&ptable.lock);
   }
 }
-/*
-struct proc* findReadyProcess(int *index1, int *index2, int *index3, uint *priority) {
-  int i;
-  struct proc* proc2;
-notfound:
-  for (i = 0; i < NPROC; i++) {
-    switch(*priority) {
-      case 1:
-        proc2 = &ptable.proc[(*index1 + i) % NPROC];
-        if (proc2->state == RUNNABLE && proc2->priority == *priority) {
-          *index1 = (*index1 + 1 + i) % NPROC;
-          return proc2; // found a runnable process with appropriate priority
-        }
-      case 2:
-        proc2 = &ptable.proc[(*index2 + i) % NPROC];
-        if (proc2->state == RUNNABLE && proc2->priority == *priority) {
-          *index2 = (*index2 + 1 + i) % NPROC;
-          return proc2; // found a runnable process with appropriate priority
-        }
-      case 3:
-        proc2 = &ptable.proc[(*index3 + i) % NPROC];
-        if (proc2->state == RUNNABLE && proc2->priority == *priority){
-          *index3 = (*index3 + 1 + i) % NPROC;
-          return proc2; // found a runnable process with appropriate priority
-        }
-    }
-  }
-  if (*priority == 3) {//did not find any process on any of the prorities
-    *priority = 3;
-    return 0;
-  }
-  else {
-    *priority += 1; //will try to find a process at a lower priority (ighter value of priority)
-    goto notfound;
-  }
-  return 0;
-}
-*/
 
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state. Saves and restores
@@ -581,4 +657,61 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+
+int
+setpri(int pid, int pri)
+{
+  int i;
+  struct proc* proc2;
+  for(i=0; i<NPROC; i++) {
+    proc2 = &ptable.proc[i];
+    if(proc2->state != UNUSED && proc2->pid == pid) {
+      proc2->priority = pri;
+      return 1;
+    }
+  }
+  return 0;
+}
+
+int
+pinfo()
+{
+  struct proc *p;
+  cprintf("%-10s %-10s %-10s %-10s %-10s\n", "name", "pid", "state", "priority", "crateTime");
+  cprintf("---------------------------------------------------------------------------------------------------------------------------------");
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    cprintf("%-10s %-10d %-10s %-10s %-10d\n", p->name, p->pid, p->state, p->priority, p->ctime);
+  }
+  return 1;
+}
+
+int
+set_tickets(int pid, int ticket)
+{
+  int i;
+  struct proc* proc2;
+  for(i=0; i<NPROC; i++) {
+    proc2 = &ptable.proc[i];
+    if(proc2->state != UNUSED && proc2->pid == pid) {
+      proc2->tickets = ticket;
+      return 1;
+    }
+  }
+  return 0;
+}
+
+int
+set_rem(int pid, int rem)
+{
+  int i;
+  struct proc* proc2;
+  for(i=0; i<NPROC; i++) {
+    proc2 = &ptable.proc[i];
+    if(proc2->state != UNUSED && proc2->pid == pid) {
+      proc2->remPriority = rem;
+      return 1;
+    }
+  }
+  return 0;
 }
