@@ -120,9 +120,10 @@ sys_set_tickets(void)
 int
 sys_set_rem(void)
 {
-  int pid, rem;
-  argint(1, &rem);
+  int pid;
+  char* remS;
+  argstr(1, &remS);
   argint(0, &pid);
-  int res = set_rem(pid, rem);
+  int res = set_rem(pid, remS);
   return res;
 }

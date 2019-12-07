@@ -123,7 +123,7 @@ void            yield(void);
 int             setpri(int, int);
 int             pinfo(void);
 int             set_tickets(int, int);
-int             set_rem(int, int);
+int             set_rem(int, char*);
 
 
 // swtch.S

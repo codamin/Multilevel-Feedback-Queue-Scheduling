@@ -377,14 +377,16 @@ notfound:
       if(proc2->state == RUNNABLE && proc2->priority == curPriority)
         sumTickets += proc2->tickets;
     }
-    int random = genRandom(sumTickets);
-    for(i=0; i<NPROC; i++) {
-      proc2 = &ptable.proc[i];
-      if(proc2->state == RUNNABLE && proc2->priority == curPriority) {
-        if(random <= proc2->tickets)
-          return proc2;
-        else
-          random -= proc2->tickets;
+    if(sumTickets > 0) {
+      int random = genRandom(sumTickets);
+      for(i=0; i<NPROC; i++) {
+        proc2 = &ptable.proc[i];
+        if(proc2->state == RUNNABLE && proc2->priority == curPriority) {
+          if(random <= proc2->tickets)
+            return proc2;
+          else
+            random -= proc2->tickets;
+        }
       }
     }
   }
@@ -426,6 +428,8 @@ notfound:
     if(numMin > 0) {
       int random = genRandom(numMin);
       proc2 = &ptable.proc[valList[random]];
+      if(proc2->remPriority >= 0.1)
+        proc2->remPriority -= 0.1;
       return proc2;
     }
   }
@@ -459,15 +463,16 @@ scheduler(void)
       if(foundP != 0)
         p = foundP;
       else
-        if(p->state != RUNNABLE)
-          continue;
-      
+        continue;
+        // if(p->state != RUNNABLE)
+        //   continue;
+        
       if(p != 0) {
-        p->execNum++;
         c->proc = p;
 
         switchuvm(p);
         p->state = RUNNING;
+        p->execNum++;
 
         swtch(&(c->scheduler), p->context);
         switchkvm();
@@ -662,13 +667,9 @@ procdump(void)
 
 void
 print_integer(int n) {
-
   char digit[20];
-
   int temp = n;
-
   int count = 0;
-
   while(temp > 0)
   {
     temp = temp/10;
@@ -682,10 +683,42 @@ print_integer(int n) {
   }
 
   digit[count] = '\0';
-
   cprintf(digit);
 }
 
+void
+print_float(float fl) {
+  char ans[85];
+  int tmp = fl * 10;
+  int count = 0;
+  while(tmp > 0) {
+    tmp = tmp/10;
+    count++;
+  }
+  tmp = fl*10;
+  if(count == 0) {
+    ans[0] = '0';
+    ans[1] = '\0';
+  }
+  else if(count == 1) {
+    ans[0] = '0';
+    ans[1] = '.';
+    ans[2] = tmp + '0';
+    ans[3] = '\0';
+  }
+  else {
+    ans[count+1] = '\0';
+    ans[count] = tmp%10 + '0';
+    ans[count-1] = '.';
+    tmp = tmp/10;
+    count--;
+    for(int i=count-1; i>=0; i--) {
+      ans[i] = tmp % 10 + '0';
+      tmp = tmp/10;
+    }
+  }
+  cprintf(ans);
+}
 
 int
 setpri(int pid, int pri)
@@ -763,7 +796,7 @@ pinfo()
       cprintf("\t\t");
       print_integer(p->priority);
       cprintf("\t\t");
-      print_integer(p->remPriority);
+      print_float(p->remPriority);
       cprintf("\t\t");
       print_integer(p->tickets);
       cprintf("\t\t");
@@ -795,15 +828,35 @@ set_tickets(int pid, int ticket)
   return 0;
 }
 
+
+float stof(char* str) {
+    float ans = 0;
+    int it = 0;
+    while(it<strlen(str) && str[it] != '.') {
+        ans = (ans * 10) + (str[it] - '0');
+        it++;
+    }
+    if(it == strlen(str))
+        return ans;
+    it++;
+    float tmp = 0.1;
+    while(it<strlen(str)) {
+        ans += tmp * (str[it] - '0');
+        tmp = tmp * 0.1;
+        it++;
+    }
+    return ans;
+}
+
 int
-set_rem(int pid, int rem)
+set_rem(int pid, char* rem)
 {
   int i;
   struct proc* proc2;
   for(i=0; i<NPROC; i++) {
     proc2 = &ptable.proc[i];
     if(proc2->state != UNUSED && proc2->pid == pid) {
-      proc2->remPriority = rem;
+      proc2->remPriority = stof(rem);
       return 1;
     }
   }
