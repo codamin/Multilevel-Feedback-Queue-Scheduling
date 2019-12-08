@@ -3,12 +3,27 @@
 
 int main(int argc, char* argv[])
 {
-    int pid;
-    pid = fork();
-    if(pid == 0) {
+    if(fork() == 0)
+    {
         while(1);
     }
-    else {
-        return 0;
+    else
+    {
+        if(fork() == 0)
+        {
+            while(1);
+        }
+
+        else {
+            if(fork() == 0)
+            {
+                while(1);
+            }
+            else{
+                wait();
+            }
+        }
+        wait();
     }
+    wait();
 }

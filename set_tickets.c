@@ -10,7 +10,6 @@ int main(int argc, char* argv[])
     }
     int result = set_tickets(atoi(argv[1]), atoi(argv[2]));
     if (result != 1) {
-
-        write(1, "dadash set_ticket riiiiiid\n", sizeof("dadash set_ticket riiiiiid\n"));
+        write(1, "system call failed\n", sizeof("system call failed\n"));
     }
 }

@@ -29,6 +29,6 @@ int main(int argc, char* argv[])
     }
     int result = set_rem(atoi(argv[1]), argv[2]);
     if (result != 1) {
-        write(1, "dadash set riiiiiid\n", sizeof("dadash set riiiiiid\n"));
+        write(1, "system call failed\n", sizeof("system call failed\n"));
     }
 }

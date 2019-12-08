@@ -668,6 +668,10 @@ procdump(void)
 void
 print_integer(int n) {
   char digit[20];
+  if(n == 0) {
+    cprintf("0");
+    return;
+  }
   int temp = n;
   int count = 0;
   while(temp > 0)
@@ -802,7 +806,7 @@ pinfo()
       cprintf("\t\t");
       print_integer(p->execNum);
       cprintf("\t\t");
-      int hrrn = (ticks - p->ctime)/p->execNum;
+      int hrrn = (ticks - p->ctime)/ p->execNum;
       print_integer(hrrn);
       cprintf("\t\t");
       print_integer(p->ctime);

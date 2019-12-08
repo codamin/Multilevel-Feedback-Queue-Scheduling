@@ -12,7 +12,6 @@ int main(int argc, char* argv[])
     write(0, argv[2], strlen(argv[2]));
     int result = setpri(atoi(argv[1]), atoi(argv[2]));
     if (result != 1) {
-
-        write(1, "dadash setpri riiiiiid\n", sizeof("dadash setpri riiiiiid\n"));
+        write(1, "system call failed\n", sizeof("system call failed\n"));
     }
 }
